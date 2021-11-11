@@ -1,0 +1,268 @@
+---
+title: "Taller 1 - Aprendizaje Estadístico"
+author: "Julian Buitrago"
+date: "30/10/2021"
+output:
+  html_document:
+    df_print: paged
+    
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+El conjunto de datos contiene los registros correspondientes a los resultados de la prueba Saber 11 de un periodo específico. El diccionario de variables de los conjuntos de datos se encuentra aqui. Realizaremos una serie de análisis a este conjunto de datos
+
+#### Carga de librerias
+```{r, message=FALSE, warning=FALSE}
+
+#install.packages('corrplot')
+#library("tidyverse")
+library("dplyr")
+library("esquisse")
+library("knitr")
+library("magrittr")
+library("saber")
+library('corrplot') 
+```
+
+#### Carga de datos
+
+```{r, message=FALSE, warning=FALSE}
+data("SB11_20061")
+datos = SB11_20061
+View(datos)
+attach(datos)
+```
+
+#### Visualizacion de los datos
+```{r, message=FALSE, warning=FALSE}
+sample_n(tbl = datos, size = 5)
+```
+
+#### Características generales
+
+Respondamos las siguientes preguntas:
+
+##### • P1: ¿Cuántas columnas tiene la base de datos?
+
+La cantidad de columnas en el dataframe son:
+```{r, warning=FALSE}
+ncol(datos)
+```
+##### • P2: ¿Cuántas de estas son categóricas?
+
+```{r, warning=FALSE}
+variables<-datos %>% sapply(class) %>% as.data.frame() %>% rename(Nombre=1)
+variables_categoricas<-variables %>%  filter(grepl('character', Nombre))
+num_var<-nrow(variables_categoricas)
+sample_n(tbl = variables_categoricas, size = num_var)
+```
+La cantidad de variables categoricas en el dataframe son:
+```{r, warning=FALSE}
+num_var
+```
+
+##### • P3: ¿Cuántas de estas son numéricas?
+
+```{r, warning=FALSE}
+variables<-datos %>% sapply(class) %>% as.data.frame() %>% rename(Nombre=1)
+variables_numericas<-variables %>%  filter(grepl('integer', Nombre))
+num_var <- nrow(variables_numericas)
+sample_n(tbl = variables_numericas, size = num_var)
+```
+La cantidad de variables numéricas en el dataframe son: 
+
+```{r, warning=FALSE}
+num_var
+```
+
+
+##### • P4: ¿Cuántos registros tiene la base de datos
+
+El dataframe tiene:
+```{r, warning=FALSE}
+registros <- datos %>% nrow()
+registros
+```
+
+
+#### Particularidades
+
+Podemos también responder algunas preguntas muy fáciles sobre la prueba Saber 11.
+
+##### • P5: ¿Cuál es el departamento (ESTU_RESIDE_DEPT_PRESENTACION) en el que reside el estudiante que tuvo el puntaje en física (FISICA_PUNT) más alto?
+
+El o los departamentos donde residen el o los estudiantes con el mayor puntaje de física son:
+
+Forma 1:
+```{r, warning=FALSE}
+datos[FISICA_PUNT == max(FISICA_PUNT), c("ESTU_RESIDE_DEPT_PRESENTACION", "FISICA_PUNT") ]
+```
+
+Forma 2:
+```{r, warning=FALSE}
+datos %>%
+        distinct(ESTU_RESIDE_DEPT_PRESENTACION, FISICA_PUNT) %>%
+        filter(FISICA_PUNT == max(datos %>% select(FISICA_PUNT)))
+```
+
+##### • P6: ¿Cuál es el municipio (ESTU_RESIDE_MPIO_PRESENTACION) en el que reside el estudiante que tuvo el puntaje en física (FISICA_PUNT) más bajo?
+
+El o los municipios donde residen el o los estudiantes con el menor puntajes de física son:
+
+```{r, warning=FALSE}
+datos %>%
+        distinct(ESTU_RESIDE_MPIO_PRESENTACION, FISICA_PUNT) %>%
+        filter(FISICA_PUNT == min(datos %>% select(FISICA_PUNT)))
+```
+
+##### • P7: ¿Cuál es el departamento (ESTU_RESIDE_DEPT_PRESENTACION) en el que reside el estudiante que tuvo el puntaje en filosofía (FILOSOFIA_PUNT) más alto?
+
+El o los departamentos donde residen el o los estudiantes con el mayor puntaje de filosofía son:
+
+```{r, warning=FALSE}
+datos %>%
+        distinct(ESTU_RESIDE_DEPT_PRESENTACION, FILOSOFIA_PUNT) %>%
+        filter(FILOSOFIA_PUNT == max(datos %>% select(FILOSOFIA_PUNT)))
+```
+##### • P8: ¿Cuál es el municipio (ESTU_RESIDE_MPIO_PRESENTACION) en el que reside el estudiante que tuvo el puntaje en filosofía (FILOSOFIA_PUNT) más bajo?
+
+El o los municipios donde residen el o los estudiantes con el menor puntajes de filosofía son:
+
+```{r, warning=FALSE}
+datos %>%
+        distinct(ESTU_RESIDE_MPIO_PRESENTACION, FILOSOFIA_PUNT) %>%
+        filter(FILOSOFIA_PUNT == min(datos %>% select(FILOSOFIA_PUNT)))
+```
+
+#### Estadísticos univariados
+
+Para comenzar podemos calcular algunos descriptivos univariados
+
+
+##### • P9: ¿Cuál es el promedio del puntaje de matemáticas (MATEMATICAS_PUNT)?
+
+El promedio del puntaje de matemáticas es:
+
+```{r, warning=FALSE}
+sapply(datos[ ,  c("MATEMATICAS_PUNT")], mean, na.rm = TRUE)
+```
+
+##### • P10: ¿Cuál es el la desviación estándar del puntaje de matemáticas (MATEMATICAS_PUNT)?
+
+La desviación estándar del puntaje de matemáticas es:
+
+```{r, warning=FALSE}
+sapply(datos[ ,  c("MATEMATICAS_PUNT")], sd, na.rm = TRUE)
+```
+
+##### • P11: ¿Qué porcentaje de los estudiantes tiene acceso a un computador (ECON_SN_COMPUTADOR)?
+
+http://econreg.pbworks.com/w/file/fetch/44310922/DicciVariables.pdf
+
+El porcentaje de los estudiantes tiene acceso a un computador
+```{r, message=FALSE}
+datos[ECON_SN_COMPUTADOR %in% c("1", "2", "3", "4"),] %>% nrow()/registros
+```
+
+##### • P12: ¿Qué porcentaje de los estudiantes trabaja (ESTU_TRABAJA)?
+
+http://econreg.pbworks.com/w/file/fetch/44310922/DicciVariables.pdf
+
+El porcentaje de los estudiantes que trabajan es de:
+
+```{r, message=FALSE}
+datos[ESTU_TRABAJA %in% c("1", "2", "3", "4", "5", "6", "7"),] %>% nrow()/registros
+```
+
+##### • P13: ¿Qué porcentaje de los estudiantes hay en colegios oficiales (COLE_NATURALEZA)?
+
+http://econreg.pbworks.com/w/file/fetch/44310922/DicciVariables.pdf
+
+El porcentaje de los estudiantes que hay en colegios oficiales es de:
+
+```{r, message=FALSE}
+datos[COLE_NATURALEZA=="O",] %>% nrow()/registros
+```
+
+##### • P14: ¿A partir de qué valor de edad comienza el 10% mayor? (ESTU_EDAD)
+
+La edad a la cual comienza el 10% del mayor es de: 
+
+```{r,message=FALSE, warning=FALSE}
+#table(ESTU_EDAD)
+quantile(datos$ESTU_EDAD, probs = 0.9)
+```
+
+##### • P15: ¿Hasta qué valor de edad llega el 15% menor? (ESTU_EDAD)
+
+La edad a la cual comienza el 15% menor es de: 
+
+```{r,message=FALSE, warning=FALSE}
+#table(ESTU_EDAD)
+quantile(datos$ESTU_EDAD, probs = 0.15)
+```
+
+##### • P16: ¿Cuáles son los 5 municipios con más estudiantes? (ESTU_RESIDE_MPIO_PRESENTACION)
+```{r, message=FALSE}
+datos %>%
+        group_by(ESTU_RESIDE_MPIO_PRESENTACION) %>%
+        summarize(Observaciones = n())  %>% 
+        arrange(desc(Observaciones))  %>% 
+        slice(1:5) 
+```
+
+#### Graficos univariados
+
+Ahora vamos a incursionar en el terreno de los gráficos. Dibujemos las siguientes figuras.
+
+##### • P17: Histograma del puntaje de lenguaje (LENGUAJE_PUNT).
+```{r, message=FALSE}
+hist(x = LENGUAJE_PUNT, freq = TRUE, nclass = nclass.Sturges(LENGUAJE_PUNT), border = "red", col = "pink", 
+     xlab = "Puntaje de lenguaje", ylab = "Frecuencia", main = "Histograma del puntaje de lenguaje")
+```
+
+##### • P18: Gráfico de barras del conteo del estrato (ESTU_ESTRATO).
+
+```{r, message=FALSE}
+barplot(table(datos$ESTU_ESTRATO), col = "red", border = "blue", xlab = "Estratos", ylab = "Frecuencia absoluta", main = "Conteo de estratos")
+```
+
+##### • P19: Gráfico de caja de la edad (ESTU_EDAD).
+```{r, message=FALSE}
+boxplot(x = ESTU_EDAD, horizontal = TRUE, boxwex = 0.5, cex = 0.8, 
+        border = "blue", col = "lightblue")
+```
+
+#### Correlaciones
+
+A nivel bivariado podemos indagar las relaciones entre las variables.
+
+##### • P20:  ¿Qué nos dice la matriz de correlaciones de los puntajes (LENGUAJE_PUNT, MATEMATICAS_PUNT, CIENCIAS_SOCIALES_PUNT, FILOSOFIA_PUNT, BIOLOGIA_PUNT, QUIMICA_PUNT, FISICA_PUNT)?
+
+```{r, message=FALSE}
+matriz_puntajes <- datos[, c("LENGUAJE_PUNT", "MATEMATICAS_PUNT", "CIENCIAS_SOCIALES_PUNT", "FILOSOFIA_PUNT", "BIOLOGIA_PUNT", "QUIMICA_PUNT", "FISICA_PUNT")]
+```
+
+##### Pearson
+```{r, message=FALSE}
+pearson<-cor(matriz_puntajes, method="pearson");pearson
+```
+
+RTA:/ Después de observar la matriz de correlación, se evidencia que todas las variables de puntuación al interior de la matriz tienen una correlación directa o positiva, en donde los puntajes con correlación moderado son los biología con lenguaje y biología con ciencias sociales ya que tienen un valor por encima de 0.5, mientras que la correlación entre los demás puntajes está por debajo de 0.5 con lo cual se considera una correlación baja o débil entre los distintos puntajes.
+
+##### P21: Construir un dispersograma entre los puntajes de (LENGUAJE_PUNT, MATEMATICAS_PUNT, CIENCIAS_SOCIALES_PUNT, FILOSOFIA_PUNT, BIOLOGIA_PUNT, QUIMICA_PUNT, FISICA_PUNT).
+
+Forma 1
+```{r, message=FALSE}
+pairs(matriz_puntajes)
+```
+
+Forma 2
+
+```{r, message=FALSE}
+corrplot(pearson, method = "circle")
+```
